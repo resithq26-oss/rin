@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: 'Rin',
   description: 'ゆいの日常を支えるパーソナルコンパニオン',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export const viewport: Viewport = {
