@@ -4,12 +4,6 @@ import { useState, useRef } from 'react'
 import { uid, NOTE_COLOR_SWATCHES } from '@/lib/utils'
 import type { Note, NoteColor } from '@/types'
 
-const COLOR_BG: Record<NoteColor, string> = {
-  default: '#ffffff', red: '#fff5f5', orange: '#fff8f0',
-  yellow: '#fffdf0', green: '#f0fff4', teal: '#f0fdfd',
-  blue: '#eff6ff', purple: '#f5f3ff', pink: '#fff0f6',
-}
-
 interface InlineNoteInputProps {
   onSave: (fields: Omit<Note, 'id' | 'created_at' | 'updated_at'>) => void
 }
@@ -38,8 +32,7 @@ export default function InlineNoteInput({ onSave }: InlineNoteInputProps) {
   }
 
   return (
-    <div className={`inline-note-card ${expanded ? 'expanded' : ''}`}
-      style={{ background: COLOR_BG[color] }}>
+    <div className={`inline-note-card note-color-${color} ${expanded ? 'expanded' : ''}`}>
       {!expanded ? (
         <div className="inline-note-placeholder" onClick={handlePlaceholderClick}>
           メモを書く…
@@ -49,7 +42,6 @@ export default function InlineNoteInput({ onSave }: InlineNoteInputProps) {
           <input
             ref={titleRef}
             className="inline-note-title"
-            style={{ background: COLOR_BG[color] }}
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="タイトル"
@@ -57,7 +49,6 @@ export default function InlineNoteInput({ onSave }: InlineNoteInputProps) {
           />
           <textarea
             className="inline-note-body"
-            style={{ background: COLOR_BG[color] }}
             value={content}
             onChange={e => setContent(e.target.value)}
             placeholder="メモの内容…"

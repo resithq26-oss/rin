@@ -793,7 +793,7 @@ html[data-theme="night"] .stock-out { background: #7f1d1d; color: #fca5a5; }
   padding: 14px 18px 4px;
   font-size: 16px; font-weight: 700;
   color: var(--color-text);
-  background: none;
+  background: transparent;
   font-family: inherit;
 }
 .inline-note-body {
@@ -801,11 +801,13 @@ html[data-theme="night"] .stock-out { background: #7f1d1d; color: #fca5a5; }
   padding: 6px 18px 12px;
   font-size: 15px; line-height: 1.6;
   color: var(--color-text);
-  background: none;
+  background: transparent;
   font-family: inherit;
   resize: none;
   min-height: 72px;
 }
+.inline-note-title::placeholder,
+.inline-note-body::placeholder { color: var(--color-sub); }
 .inline-note-footer {
   display: flex;
   align-items: center;
