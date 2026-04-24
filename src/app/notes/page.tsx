@@ -36,7 +36,7 @@ export default function NotesPage() {
       const id = uid()
       const row: Note = { id, created_at: now, updated_at: now, ...fields }
       const { error } = await supabase.from('notes').insert([row])
-      if (error) { showToast('保存に失敗しました（テーブル確認が必要かも）'); return }
+      if (error) { console.error('notes insert error:', error); showToast(error.message); return }
       setNotes(ns => [row, ...ns])
       setCompanion(MSG.noteAdded)
       showToast('追加しました')

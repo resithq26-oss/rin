@@ -3,9 +3,8 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faSun, faStickyNote, faRotate, faCartShopping, faBox
-} from '@fortawesome/free-solid-svg-icons'
+import { faSun, faStickyNote, faRotate, faCartShopping, faBox } from '@fortawesome/free-solid-svg-icons'
+import { useTheme } from '@/hooks/useTheme'
 
 const NAV_ITEMS = [
   { href: '/',          icon: faSun,           label: 'ホーム' },
@@ -24,21 +23,22 @@ interface AppShellProps {
 
 export default function AppShell({ children, title, action, badges = {} }: AppShellProps) {
   const pathname = usePathname()
+  const { theme, toggle } = useTheme()
 
   return (
     <div className="app-shell">
-      {/* Header */}
       <header className="hdr">
         <span className="hdr-title">{title}</span>
+        <button className="theme-toggle-btn" onClick={toggle} title={theme === 'rin' ? 'ナイトモードへ' : '凛モードへ'}>
+          {theme === 'rin' ? '🌙' : '☀️'}
+        </button>
         {action}
       </header>
 
-      {/* Main */}
       <main className="main-scroll">
         {children}
       </main>
 
-      {/* Bottom Nav */}
       <nav className="bottom-nav">
         {NAV_ITEMS.map(item => {
           const active = pathname === item.href
