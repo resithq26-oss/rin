@@ -29,8 +29,8 @@ export default function AppShell({ children, title, action, badges = {} }: AppSh
     <div className="app-shell">
       <header className="hdr">
         <span className="hdr-title">{title}</span>
-        <button className="theme-toggle-btn" onClick={toggle} title={theme === 'rin' ? 'ナイトモードへ' : '凛モードへ'}>
-          {theme === 'rin' ? '🌙' : '☀️'}
+        <button className="theme-toggle-btn" onClick={toggle}>
+          {theme === 'rin' ? '🌙' : theme === 'night' ? '💻' : '☀️'}
         </button>
         {action}
       </header>

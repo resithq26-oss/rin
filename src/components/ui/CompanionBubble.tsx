@@ -9,12 +9,12 @@ interface CompanionBubbleProps {
 export function CompanionBubble({ message }: CompanionBubbleProps) {
   const [visible,   setVisible]   = useState(false)
   const [displayed, setDisplayed] = useState(message)
-  const [theme,     setTheme]     = useState<'rin' | 'night'>('rin')
+  const [theme,     setTheme]     = useState<'rin' | 'night' | 'aoi'>('rin')
 
   useEffect(() => {
     const update = () => {
       const t = document.documentElement.getAttribute('data-theme') || 'rin'
-      setTheme(t as 'rin' | 'night')
+      setTheme(t as 'rin' | 'night' | 'aoi')
     }
     update()
     const obs = new MutationObserver(update)
@@ -31,7 +31,7 @@ export function CompanionBubble({ message }: CompanionBubbleProps) {
   return (
     <div className="companion-wrap">
       <img
-        src={theme === 'night' ? '/rin/night.png' : '/rin/day.png'}
+        src={theme === 'night' ? '/rin/night.png' : theme === 'aoi' ? '/rin/aoi.png' : '/rin/day.png'}
         alt="Rin"
         className="companion-avatar"
       />

@@ -1,7 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
 
-export type Theme = 'rin' | 'night'
+export type Theme = 'rin' | 'night' | 'aoi'
+
+const CYCLE: Theme[] = ['rin', 'night', 'aoi']
 
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>('rin')
@@ -14,7 +16,7 @@ export function useTheme() {
 
   function toggle() {
     setTheme(prev => {
-      const next: Theme = prev === 'rin' ? 'night' : 'rin'
+      const next = CYCLE[(CYCLE.indexOf(prev) + 1) % CYCLE.length]
       document.documentElement.setAttribute('data-theme', next)
       localStorage.setItem('rin-theme', next)
       return next

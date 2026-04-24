@@ -51,6 +51,74 @@ html[data-theme="night"] {
   --color-nav-bg:     rgba(24,27,46,.97);
 }
 
+/* ===== AOI MODE (Cyberpunk) ===== */
+html[data-theme="aoi"] {
+  --color-primary:    #00e5ff;
+  --color-primary-d:  #00b8d9;
+  --color-success:    #00ffa3;
+  --color-warning:    #ffd600;
+  --color-danger:     #ff2d6b;
+  --color-info:       #00e5ff;
+  --color-surface:    #0c1118;
+  --color-bg:         #060a0e;
+  --color-text:       #cffafe;
+  --color-sub:        #4dd0e1;
+  --color-border:     rgba(0,229,255,.18);
+  --color-hdr-bg:     rgba(6,10,14,.96);
+  --color-nav-bg:     rgba(12,17,24,.98);
+}
+
+/* グロー効果 */
+html[data-theme="aoi"] .list-card,
+html[data-theme="aoi"] .habit-card,
+html[data-theme="aoi"] .note-card {
+  border-color: rgba(0,229,255,.2);
+  box-shadow: 0 0 0 0 rgba(0,229,255,0);
+  transition: box-shadow .2s, border-color .2s;
+}
+html[data-theme="aoi"] .list-card:active,
+html[data-theme="aoi"] .habit-card:active,
+html[data-theme="aoi"] .note-card:active {
+  box-shadow: 0 0 16px rgba(0,229,255,.25);
+}
+html[data-theme="aoi"] .nav-item.active {
+  text-shadow: 0 0 10px rgba(0,229,255,.8);
+  filter: drop-shadow(0 0 4px rgba(0,229,255,.6));
+}
+html[data-theme="aoi"] .hdr-title {
+  text-shadow: 0 0 12px rgba(0,229,255,.5);
+}
+html[data-theme="aoi"] .companion-bubble {
+  border-color: rgba(0,229,255,.3);
+  box-shadow: 0 0 16px rgba(0,229,255,.12);
+}
+html[data-theme="aoi"] .companion-avatar {
+  box-shadow: 0 0 16px rgba(0,229,255,.35), 0 2px 8px rgba(0,0,0,.4);
+}
+html[data-theme="aoi"] .btn-primary {
+  box-shadow: 0 0 16px rgba(0,229,255,.35);
+}
+html[data-theme="aoi"] .hdr-add-btn {
+  box-shadow: 0 0 12px rgba(0,229,255,.3);
+}
+html[data-theme="aoi"] .bottom-nav {
+  border-top-color: rgba(0,229,255,.15);
+  box-shadow: 0 -4px 20px rgba(0,229,255,.06);
+}
+html[data-theme="aoi"] .badge-done     { background: #003d29; color: #00ffa3; }
+html[data-theme="aoi"] .badge-due      { background: #003344; color: #00e5ff; }
+html[data-theme="aoi"] .badge-overdue  { background: #3d0020; color: #ff2d6b; }
+html[data-theme="aoi"] .stock-in  { background: #003d29; color: #00ffa3; }
+html[data-theme="aoi"] .stock-out { background: #3d0020; color: #ff2d6b; }
+html[data-theme="aoi"] .note-color-red    { background: #1a0510; }
+html[data-theme="aoi"] .note-color-orange { background: #1a0d05; }
+html[data-theme="aoi"] .note-color-yellow { background: #1a1500; }
+html[data-theme="aoi"] .note-color-green  { background: #001a0d; }
+html[data-theme="aoi"] .note-color-teal   { background: #001a1a; }
+html[data-theme="aoi"] .note-color-blue   { background: #001a2e; }
+html[data-theme="aoi"] .note-color-purple { background: #0d0020; }
+html[data-theme="aoi"] .note-color-pink   { background: #1a0014; }
+
 /* ===== APP SHELL ===== */
 .app-shell {
   display: flex;
