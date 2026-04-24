@@ -95,7 +95,7 @@ export default function StockPage() {
   const action = <button className="hdr-add-btn" onClick={() => setShowAdd(true)}>＋ 追加</button>
 
   return (
-    <AppShell title="📦 ストック" action={action} badges={{ '/stock': urgentCount }}>
+    <AppShell title="📦 ストック" action={action}>
       <CompanionBubble message={companion} />
       {loading ? (
         <div className="empty"><div className="spinner" /><p>読み込み中…</p></div>

@@ -102,8 +102,8 @@ html[data-theme="aoi"] .hdr-add-btn {
   box-shadow: 0 0 12px rgba(0,229,255,.3);
 }
 html[data-theme="aoi"] .bottom-nav {
-  border-top-color: rgba(0,229,255,.15);
-  box-shadow: 0 -4px 20px rgba(0,229,255,.06);
+  border-color: rgba(0,229,255,.25);
+  box-shadow: 0 0 24px rgba(0,229,255,.18), 0 4px 24px rgba(0,0,0,.4);
 }
 html[data-theme="aoi"] .badge-done     { background: #003d29; color: #00ffa3; }
 html[data-theme="aoi"] .badge-due      { background: #003344; color: #00e5ff; }
@@ -183,25 +183,27 @@ html[data-theme="aoi"] .note-color-pink   { background: #1a0014; }
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(68px + 20px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(64px + 28px + env(safe-area-inset-bottom, 0px));
 }
 
-/* ===== BOTTOM NAV ===== */
+/* ===== BOTTOM NAV (floating pill) ===== */
 .bottom-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 68px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 560px;
+  height: 60px;
   background: var(--color-nav-bg);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid var(--color-border);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
   display: flex;
   z-index: 200;
-  padding-bottom: env(safe-area-inset-bottom, 0);
-  max-width: 640px;
-  margin: 0 auto;
+  box-shadow: 0 4px 24px rgba(0,0,0,.12), 0 1px 4px rgba(0,0,0,.06);
+  transition: box-shadow .2s;
 }
 .nav-item {
   flex: 1;

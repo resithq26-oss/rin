@@ -75,7 +75,7 @@ export default function RoutinesPage() {
   const action = <button className="hdr-add-btn" onClick={() => setShowAdd(true)}>＋ 追加</button>
 
   return (
-    <AppShell title="🔄 ルーティン" action={action} badges={{ '/routines': dueCount }}>
+    <AppShell title="🔄 ルーティン" action={action}>
       <CompanionBubble message={companion} />
       {loading ? (
         <div className="empty"><div className="spinner" /><p>読み込み中…</p></div>

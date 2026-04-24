@@ -81,7 +81,7 @@ export default function ShoppingPage() {
   const action = <button className="hdr-add-btn" onClick={() => setShowAdd(true)}>＋ 追加</button>
 
   return (
-    <AppShell title="🛒 買い物" action={action} badges={{ '/shopping': visible.length }}>
+    <AppShell title="🛒 買い物" action={action}>
       <CompanionBubble message={visible.length === 0 ? MSG.cartEmpty : companion} />
       {loading ? (
         <div className="empty"><div className="spinner" /><p>読み込み中…</p></div>

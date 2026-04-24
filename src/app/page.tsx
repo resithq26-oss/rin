@@ -86,11 +86,10 @@ export default function TodayPage() {
     return 'お疲れさまです 🌆'
   }
 
-  const badges = { '/routines': dueHabits.length, '/stock': urgentItems.length }
   const action = <button className="hdr-add-btn" onClick={() => setShowAdd(true)}>＋ メモ</button>
 
   return (
-    <AppShell title="Rin ✦" action={action} badges={badges}>
+    <AppShell title="Rin ✦" action={action}>
       {loading ? (
         <div className="empty"><div className="spinner" /></div>
       ) : (
