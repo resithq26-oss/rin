@@ -449,6 +449,17 @@ html[data-theme="aoi"] .note-color-pink   { background: #1a0014; }
   transition: opacity .1s;
 }
 .btn-danger:active { opacity: .8; }
+.btn-shopping {
+  width: 100%; height: 50px;
+  border-radius: 14px;
+  font-size: 16px; font-weight: 600;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-primary);
+  cursor: pointer;
+  transition: opacity .1s;
+}
+.btn-shopping:active { opacity: .8; }
 
 /* ===== BADGE ===== */
 .badge {
