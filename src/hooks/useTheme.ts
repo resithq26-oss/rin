@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 
-export type Theme = 'rin' | 'night' | 'aoi'
+export type Theme = 'rin' | 'night'
 
 export function useTheme() {
   const [theme, setThemeState] = useState<Theme>('rin')

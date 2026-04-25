@@ -48,6 +48,15 @@ export interface Pickup {
   added_at: string
 }
 
+export interface PortalLink {
+  id: string
+  title: string
+  url: string
+  emoji: string
+  category: string
+  position: number
+}
+
 export interface InventoryItem {
   id: string
   name: string

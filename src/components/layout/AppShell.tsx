@@ -10,12 +10,12 @@ import { getHabitStatus } from '@/lib/utils'
 import type { Habit } from '@/types'
 
 const NAV_ITEMS = [
-  { href: '/',          icon: faHouse,         label: 'ホーム' },
-  { href: '/notes',     icon: faStickyNote,    label: 'ノート' },
-  { href: '/routines',  icon: faRotate,        label: 'ルーティン' },
-  { href: '/shopping',  icon: faCartShopping,  label: '買い物' },
-  { href: '/stock',     icon: faBox,           label: 'ストック' },
-  { href: '/settings',  icon: faGear,          label: '設定' },
+  { href: '/',         icon: faHouse,        label: 'ホーム' },
+  { href: '/notes',    icon: faStickyNote,   label: 'ノート' },
+  { href: '/routines', icon: faRotate,       label: 'ルーティン' },
+  { href: '/shopping', icon: faCartShopping, label: '買い物' },
+  { href: '/stock',    icon: faBox,          label: 'ストック' },
+  { href: '/settings', icon: faGear,         label: '設定' },
 ]
 
 interface AppShellProps {
@@ -52,33 +52,57 @@ export default function AppShell({ children, title, action }: AppShellProps) {
     return () => { supabase.removeChannel(ch) }
   }, [])
 
+  const navItems = NAV_ITEMS.map(item => ({
+    ...item,
+    active: pathname === item.href,
+    count:  badges[item.href],
+  }))
+
   return (
     <div className="app-shell">
-      <header className="hdr">
-        <span className="hdr-title">{title}</span>
-        {action}
-      </header>
-
-      <main className="main-scroll">
-        {children}
-      </main>
-
-      <nav className="bottom-nav">
-        {NAV_ITEMS.map(item => {
-          const active = pathname === item.href
-          const count  = badges[item.href]
-          return (
-            <Link key={item.href} href={item.href} className={`nav-item ${active ? 'active' : ''}`}>
+      {/* PC サイドバー */}
+      <aside className="sidebar">
+        <div className="sidebar-logo">Rin ✦</div>
+        <nav className="sidebar-nav">
+          {navItems.map(item => (
+            <Link key={item.href} href={item.href} className={`sidebar-nav-item ${item.active ? 'active' : ''}`}>
               <span className="nav-icon-wrap">
-                <FontAwesomeIcon icon={item.icon} style={{ fontSize: 18 }} />
-                {count != null && count > 0 && (
-                  <span className="nav-badge">{count}</span>
+                <FontAwesomeIcon icon={item.icon} style={{ fontSize: 17 }} />
+                {item.count != null && item.count > 0 && (
+                  <span className="nav-badge">{item.count}</span>
                 )}
               </span>
-              {item.label}
+              <span>{item.label}</span>
             </Link>
-          )
-        })}
+          ))}
+        </nav>
+      </aside>
+
+      {/* メインコンテンツ */}
+      <div className="shell-main">
+        <header className="hdr">
+          <span className="hdr-title">{title}</span>
+          {action}
+        </header>
+
+        <main className="main-scroll">
+          {children}
+        </main>
+      </div>
+
+      {/* モバイル フローティングナビ */}
+      <nav className="bottom-nav">
+        {navItems.map(item => (
+          <Link key={item.href} href={item.href} className={`nav-item ${item.active ? 'active' : ''}`}>
+            <span className="nav-icon-wrap">
+              <FontAwesomeIcon icon={item.icon} style={{ fontSize: 18 }} />
+              {item.count != null && item.count > 0 && (
+                <span className="nav-badge">{item.count}</span>
+              )}
+            </span>
+            {item.label}
+          </Link>
+        ))}
       </nav>
     </div>
   )

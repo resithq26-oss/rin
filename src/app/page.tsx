@@ -6,13 +6,15 @@ import AppShell from '@/components/layout/AppShell'
 import NoteCard from '@/components/notes/NoteCard'
 import NoteDetailModal from '@/components/notes/NoteDetailModal'
 import NoteModal from '@/components/notes/NoteModal'
+import { CompanionBubble, getGreeting } from '@/components/ui/CompanionBubble'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
 import { uid, getHabitStatus, sortHabits } from '@/lib/utils'
 import { useNotes } from '@/hooks/useNotes'
 import { useHabits } from '@/hooks/useHabits'
 import { useInventory } from '@/hooks/useInventory'
-import type { Note, Habit } from '@/types'
+import { usePortalLinks } from '@/hooks/usePortalLinks'
+import type { Note, Habit, PortalLink } from '@/types'
 
 function StatusBadge({ habit }: { habit: Habit }) {
   const s = getHabitStatus(habit)
@@ -22,16 +24,69 @@ function StatusBadge({ habit }: { habit: Habit }) {
   return <span className="badge badge-upcoming">あと{s.daysLeft}日</span>
 }
 
-export default function TodayPage() {
+function AddLinkModal({ onSave, onClose }: { onSave: (l: Omit<PortalLink, 'id' | 'position'>) => void; onClose: () => void }) {
+  const [title, setTitle] = useState('')
+  const [url,   setUrl]   = useState('')
+  const [emoji, setEmoji] = useState('🔗')
+  const [cat,   setCat]   = useState('other')
+
+  function submit() {
+    if (!title.trim() || !url.trim()) return
+    const u = url.startsWith('http') ? url.trim() : `https://${url.trim()}`
+    onSave({ title: title.trim(), url: u, emoji: emoji.trim() || '🔗', category: cat })
+    onClose()
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-body">
+          <div className="modal-hdr">
+            <span className="modal-title">リンクを追加</span>
+            <button className="modal-close" onClick={onClose}>✕</button>
+          </div>
+          <div className="fg">
+            <label>絵文字</label>
+            <input className="emoji-input" value={emoji} onChange={e => setEmoji(e.target.value)} maxLength={2} />
+          </div>
+          <div className="fg">
+            <label>タイトル</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="例: Gmail" />
+          </div>
+          <div className="fg">
+            <label>URL</label>
+            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." inputMode="url" />
+          </div>
+          <div className="fg">
+            <label>カテゴリ</label>
+            <select value={cat} onChange={e => setCat(e.target.value)}>
+              <option value="other">その他</option>
+              <option value="work">仕事</option>
+              <option value="aquarium">水槽</option>
+              <option value="baseball">野球</option>
+            </select>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn-primary" onClick={submit}>追加する</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function PortalPage() {
   const { notes, setNotes, loading: nLoading }   = useNotes()
   const { habits, setHabits, loading: hLoading } = useHabits()
   const { inventory, loading: iLoading }         = useInventory()
-  const [viewNote, setViewNote] = useState<Note | null>(null)
-  const [editNote, setEditNote] = useState<Note | null>(null)
-  const [showAdd,  setShowAdd]  = useState(false)
+  const { links, setLinks, loading: lLoading }   = usePortalLinks()
+  const [viewNote,   setViewNote]   = useState<Note | null>(null)
+  const [editNote,   setEditNote]   = useState<Note | null>(null)
+  const [showAdd,    setShowAdd]    = useState(false)
+  const [showAddLink, setShowAddLink] = useState(false)
   const { msg, show: showToast } = useToast()
 
-  const loading = nLoading || hLoading || iLoading
+  const loading = nLoading || hLoading || iLoading || lLoading
   const dueHabits   = habits.filter(h => ['due', 'overdue'].includes(getHabitStatus(h).type))
   const urgentItems = inventory.filter(i => i.stock === 0 && i.urgent)
   const pinnedNotes = notes.filter(n => n.pinned)
@@ -78,12 +133,19 @@ export default function TodayPage() {
     setNotes(ns => ns.map(n => n.id === noteId ? { ...n, items, updated_at: now } : n))
   }
 
-  const greeting = () => {
-    const h = new Date().getHours()
-    if (h < 5)  return 'おやすみなさい 🌙'
-    if (h < 12) return 'おはようございます ☀️'
-    if (h < 18) return 'こんにちは 🌤'
-    return 'お疲れさまです 🌆'
+  async function addLink(fields: Omit<PortalLink, 'id' | 'position'>) {
+    const pos = links.length
+    const row: PortalLink = { id: uid(), position: pos, ...fields }
+    await supabase.from('portal_links').insert([row])
+    setLinks(ls => [...ls, row])
+    showToast('リンクを追加しました')
+  }
+
+  async function removeLink(id: string) {
+    if (!confirm('このリンクを削除しますか？')) return
+    await supabase.from('portal_links').delete().eq('id', id)
+    setLinks(ls => ls.filter(l => l.id !== id))
+    showToast('削除しました')
   }
 
   const action = <button className="hdr-add-btn" onClick={() => setShowAdd(true)}>＋ メモ</button>
@@ -94,8 +156,38 @@ export default function TodayPage() {
         <div className="empty"><div className="spinner" /></div>
       ) : (
         <>
-          <div style={{ padding: '20px 20px 4px', fontSize: 14, color: 'var(--color-sub)' }}>
-            {greeting()}
+          <CompanionBubble message={getGreeting()} />
+
+          {/* クイックリンク */}
+          <div className="today-section">
+            <div className="today-section-label">
+              🔗 <span>クイックリンク</span>
+              <button
+                onClick={() => setShowAddLink(true)}
+                style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--color-primary)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                ＋ 追加
+              </button>
+            </div>
+            <div className="portal-links-grid">
+              {links.map(link => (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="portal-link-btn"
+                  onContextMenu={e => { e.preventDefault(); removeLink(link.id) }}
+                >
+                  <span className="portal-link-emoji">{link.emoji}</span>
+                  <span className="portal-link-label">{link.title}</span>
+                </a>
+              ))}
+              <button className="portal-add-btn" onClick={() => setShowAddLink(true)}>
+                <span className="portal-add-icon">＋</span>
+                <span>追加</span>
+              </button>
+            </div>
           </div>
 
           {/* Due Habits */}
@@ -164,7 +256,7 @@ export default function TodayPage() {
             </div>
           )}
 
-          {dueHabits.length === 0 && urgentItems.length === 0 && pinnedNotes.length === 0 && (
+          {links.length === 0 && dueHabits.length === 0 && urgentItems.length === 0 && pinnedNotes.length === 0 && (
             <div className="empty">
               <div className="empty-icon">✨</div>
               <div className="empty-text">今日はすべて OK！</div>
@@ -189,6 +281,9 @@ export default function TodayPage() {
           onSave={saveNote}
           onClose={() => { setShowAdd(false); setEditNote(null) }}
         />
+      )}
+      {showAddLink && (
+        <AddLinkModal onSave={addLink} onClose={() => setShowAddLink(false)} />
       )}
       <Toast msg={msg} />
     </AppShell>
