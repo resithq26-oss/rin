@@ -2,6 +2,7 @@
 
 import AppShell from '@/components/layout/AppShell'
 import { useTheme } from '@/hooks/useTheme'
+import { useCharacter } from '@/hooks/useCharacter'
 import type { Theme } from '@/hooks/useTheme'
 
 const THEMES: { id: Theme; label: string; sub: string; avatar: string; bg: string; accent: string }[] = [
@@ -41,9 +42,24 @@ const GUIDE = [
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
+  const { charVisible, setCharVisible } = useCharacter()
 
   return (
     <AppShell title="⚙️ 設定">
+      {/* キャラクター表示 */}
+      <div className="settings-section">
+        <div className="settings-label">表示設定</div>
+        <div className="settings-info-card">
+          <div className="settings-info-row" style={{ cursor: 'pointer' }} onClick={() => setCharVisible(!charVisible)}>
+            <div>
+              <div style={{ fontWeight: 600 }}>キャラクター表示</div>
+              <div style={{ fontSize: 12, color: 'var(--color-sub)', marginTop: 2 }}>オフにするとプレーンなアイコン表示になります</div>
+            </div>
+            <span className={`toggle ${charVisible ? 'on' : ''}`} />
+          </div>
+        </div>
+      </div>
+
       {/* テーマ選択 */}
       <div className="settings-section">
         <div className="settings-label">テーマ</div>
@@ -55,7 +71,10 @@ export default function SettingsPage() {
               style={{ background: t.bg, '--accent': t.accent } as React.CSSProperties}
               onClick={() => setTheme(t.id)}
             >
-              <img src={t.avatar} alt={t.label} className="theme-card-avatar" />
+              {charVisible
+                ? <img src={t.avatar} alt={t.label} className="theme-card-avatar" />
+                : <div className="theme-card-swatch" style={{ background: t.accent }} />
+              }
               <div className="theme-card-info">
                 <div className="theme-card-name" style={{ color: t.accent }}>{t.label}</div>
                 <div className="theme-card-sub">{t.sub}</div>

@@ -6,19 +6,24 @@ interface CompanionBubbleProps {
   message: string
 }
 
+const THEME_ICON: Record<string, string> = { rin: '🌸', night: '🌙', aoi: '⚡' }
+
 export function CompanionBubble({ message }: CompanionBubbleProps) {
-  const [visible,   setVisible]   = useState(false)
-  const [displayed, setDisplayed] = useState(message)
-  const [theme,     setTheme]     = useState<'rin' | 'night' | 'aoi'>('rin')
+  const [visible,     setVisible]     = useState(false)
+  const [displayed,   setDisplayed]   = useState(message)
+  const [theme,       setTheme]       = useState<'rin' | 'night' | 'aoi'>('rin')
+  const [charVisible, setCharVisible] = useState(true)
 
   useEffect(() => {
     const update = () => {
       const t = document.documentElement.getAttribute('data-theme') || 'rin'
+      const c = document.documentElement.getAttribute('data-char') !== 'false'
       setTheme(t as 'rin' | 'night' | 'aoi')
+      setCharVisible(c)
     }
     update()
     const obs = new MutationObserver(update)
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-char'] })
     return () => obs.disconnect()
   }, [])
 
@@ -30,11 +35,15 @@ export function CompanionBubble({ message }: CompanionBubbleProps) {
 
   return (
     <div className="companion-wrap">
-      <img
-        src={theme === 'night' ? '/rin/night.png' : theme === 'aoi' ? '/rin/aoi.png' : '/rin/day.png'}
-        alt="Rin"
-        className="companion-avatar"
-      />
+      {charVisible ? (
+        <img
+          src={theme === 'night' ? '/rin/night.png' : theme === 'aoi' ? '/rin/aoi.png' : '/rin/day.png'}
+          alt="companion"
+          className="companion-avatar"
+        />
+      ) : (
+        <div className="companion-icon-plain">{THEME_ICON[theme]}</div>
+      )}
       <div className={`companion-bubble ${visible ? 'visible' : ''}`}>
         {displayed}
       </div>

@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ja" style={{ height: '100%' }}>
       <head>
         {/* テーマフラッシュ防止 */}
-        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('rin-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem('rin-theme');if(t)document.documentElement.setAttribute('data-theme',t);var c=localStorage.getItem('rin-char');if(c)document.documentElement.setAttribute('data-char',c);}catch(e){}` }} />
       </head>
       <body style={{ height: '100%', margin: 0 }}>{children}</body>
     </html>
