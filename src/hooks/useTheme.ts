@@ -3,25 +3,20 @@ import { useState, useEffect } from 'react'
 
 export type Theme = 'rin' | 'night' | 'aoi'
 
-const CYCLE: Theme[] = ['rin', 'night', 'aoi']
-
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>('rin')
+  const [theme, setThemeState] = useState<Theme>('rin')
 
   useEffect(() => {
     const saved = (localStorage.getItem('rin-theme') as Theme) || 'rin'
-    setTheme(saved)
+    setThemeState(saved)
     document.documentElement.setAttribute('data-theme', saved)
   }, [])
 
-  function toggle() {
-    setTheme(prev => {
-      const next = CYCLE[(CYCLE.indexOf(prev) + 1) % CYCLE.length]
-      document.documentElement.setAttribute('data-theme', next)
-      localStorage.setItem('rin-theme', next)
-      return next
-    })
+  function setTheme(next: Theme) {
+    document.documentElement.setAttribute('data-theme', next)
+    localStorage.setItem('rin-theme', next)
+    setThemeState(next)
   }
 
-  return { theme, toggle }
+  return { theme, setTheme }
 }

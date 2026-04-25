@@ -4,18 +4,18 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSun, faStickyNote, faRotate, faCartShopping, faBox } from '@fortawesome/free-solid-svg-icons'
-import { useTheme } from '@/hooks/useTheme'
+import { faHouse, faStickyNote, faRotate, faCartShopping, faBox, faGear } from '@fortawesome/free-solid-svg-icons'
 import { supabase } from '@/lib/supabase'
 import { getHabitStatus } from '@/lib/utils'
 import type { Habit } from '@/types'
 
 const NAV_ITEMS = [
-  { href: '/',          icon: faSun,           label: 'ホーム' },
+  { href: '/',          icon: faHouse,         label: 'ホーム' },
   { href: '/notes',     icon: faStickyNote,    label: 'ノート' },
   { href: '/routines',  icon: faRotate,        label: 'ルーティン' },
   { href: '/shopping',  icon: faCartShopping,  label: '買い物' },
   { href: '/stock',     icon: faBox,           label: 'ストック' },
+  { href: '/settings',  icon: faGear,          label: '設定' },
 ]
 
 interface AppShellProps {
@@ -26,7 +26,6 @@ interface AppShellProps {
 
 export default function AppShell({ children, title, action }: AppShellProps) {
   const pathname = usePathname()
-  const { theme, toggle } = useTheme()
   const [badges, setBadges] = useState<Record<string, number>>({})
 
   useEffect(() => {
@@ -38,14 +37,12 @@ export default function AppShell({ children, title, action }: AppShellProps) {
       ])
       const dueCount = ((habitsRes.data ?? []) as Pick<Habit, 'interval_days' | 'last_done'>[])
         .filter(h => ['due', 'overdue'].includes(getHabitStatus(h as Habit).type)).length
-
       setBadges({
         '/routines': dueCount,
         '/shopping': pickupsRes.count ?? 0,
         '/stock':    stockRes.count    ?? 0,
       })
     }
-
     fetchBadges()
     const ch = supabase.channel('appshell-badges')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'habits' },    fetchBadges)
@@ -59,9 +56,6 @@ export default function AppShell({ children, title, action }: AppShellProps) {
     <div className="app-shell">
       <header className="hdr">
         <span className="hdr-title">{title}</span>
-        <button className="theme-toggle-btn" onClick={toggle}>
-          {theme === 'rin' ? '🌙' : theme === 'night' ? '💻' : '☀️'}
-        </button>
         {action}
       </header>
 
@@ -76,7 +70,7 @@ export default function AppShell({ children, title, action }: AppShellProps) {
           return (
             <Link key={item.href} href={item.href} className={`nav-item ${active ? 'active' : ''}`}>
               <span className="nav-icon-wrap">
-                <FontAwesomeIcon icon={item.icon} style={{ fontSize: 20 }} />
+                <FontAwesomeIcon icon={item.icon} style={{ fontSize: 18 }} />
                 {count != null && count > 0 && (
                   <span className="nav-badge">{count}</span>
                 )}
