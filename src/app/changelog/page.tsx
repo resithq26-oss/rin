@@ -18,6 +18,15 @@ interface Release {
 
 const RELEASES: Release[] = [
   {
+    version: 'v2.1.0',
+    date: '2026-04-26',
+    items: [
+      { tag: 'new',    text: '碧モード復活。VSCode × サイバー配色に全面刷新' },
+      { tag: 'change', text: '凛モードを「通常モード」に改名（ライトテーマ）' },
+      { tag: 'fix',    text: '設定画面のテーマカードで凛モードの文字が見えない問題を修正' },
+    ],
+  },
+  {
     version: 'v2.0.0',
     date: '2026-04-26',
     items: [

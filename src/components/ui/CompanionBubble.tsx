@@ -6,17 +6,17 @@ interface CompanionBubbleProps {
   message: string
 }
 
-const THEME_ICON: Record<string, string> = { rin: '🌸', night: '🌙' }
+const THEME_ICON: Record<string, string> = { rin: '🌤', night: '🌙', aoi: '💻' }
 
 export function CompanionBubble({ message }: CompanionBubbleProps) {
   const [visible,   setVisible]   = useState(false)
   const [displayed, setDisplayed] = useState(message)
-  const [theme,     setTheme]     = useState<'rin' | 'night'>('rin')
+  const [theme,     setTheme]     = useState<'rin' | 'night' | 'aoi'>('rin')
 
   useEffect(() => {
     const update = () => {
       const t = document.documentElement.getAttribute('data-theme') || 'rin'
-      setTheme(t as 'rin' | 'night')
+      setTheme(t as 'rin' | 'night' | 'aoi')
     }
     update()
     const obs = new MutationObserver(update)

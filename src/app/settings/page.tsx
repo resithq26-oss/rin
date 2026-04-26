@@ -5,22 +5,33 @@ import AppShell from '@/components/layout/AppShell'
 import { useTheme } from '@/hooks/useTheme'
 import type { Theme } from '@/hooks/useTheme'
 
-const THEMES: { id: Theme; label: string; sub: string; icon: string; bg: string; accent: string }[] = [
+const THEMES: { id: Theme; label: string; sub: string; icon: string; bg: string; accent: string; subColor: string }[] = [
   {
-    id:     'rin',
-    label:  '凛モード',
-    sub:    '清潔感のある昼間テーマ',
-    icon:   '🌸',
-    bg:     'linear-gradient(135deg, #f0f3ff 0%, #dde5ff 100%)',
-    accent: '#4f6ef7',
+    id:       'rin',
+    label:    '通常モード',
+    sub:      'クリーンなライトテーマ',
+    icon:     '🌤',
+    bg:       'linear-gradient(135deg, #f0f3ff 0%, #dde5ff 100%)',
+    accent:   '#4f6ef7',
+    subColor: 'rgba(30,27,75,.5)',
   },
   {
-    id:     'night',
-    label:  'ナイトモード',
-    sub:    '落ち着いた夜のテーマ',
-    icon:   '🌙',
-    bg:     'linear-gradient(135deg, #181b2e 0%, #0e1022 100%)',
-    accent: '#a78bfa',
+    id:       'night',
+    label:    'ナイトモード',
+    sub:      '落ち着いた夜のテーマ',
+    icon:     '🌙',
+    bg:       'linear-gradient(135deg, #181b2e 0%, #0e1022 100%)',
+    accent:   '#a78bfa',
+    subColor: 'rgba(255,255,255,.55)',
+  },
+  {
+    id:       'aoi',
+    label:    '碧モード',
+    sub:      'VSCode × サイバーテーマ',
+    icon:     '💻',
+    bg:       'linear-gradient(135deg, #0d1117 0%, #1c1c2e 100%)',
+    accent:   '#4fc3f7',
+    subColor: 'rgba(79,195,247,.7)',
   },
 ]
 
@@ -51,7 +62,7 @@ export default function SettingsPage() {
               <div className="theme-card-icon">{t.icon}</div>
               <div className="theme-card-info">
                 <div className="theme-card-name" style={{ color: t.accent }}>{t.label}</div>
-                <div className="theme-card-sub">{t.sub}</div>
+                <div className="theme-card-sub" style={{ color: t.subColor }}>{t.sub}</div>
               </div>
               {theme === t.id && (
                 <div className="theme-card-check" style={{ background: t.accent }}>✓</div>
