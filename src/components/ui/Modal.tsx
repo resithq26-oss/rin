@@ -14,9 +14,10 @@ export default function Modal({ title, onClose, footer, children }: ModalProps) 
     const vv = window.visualViewport
     if (!vv) return
     const update = () => {
-      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
-      document.documentElement.style.setProperty('--keyboard-h', `${offset}px`)
+      const keyboardH = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      document.documentElement.style.setProperty('--keyboard-h', `${keyboardH}px`)
     }
+    update()
     vv.addEventListener('resize', update)
     vv.addEventListener('scroll', update)
     return () => {

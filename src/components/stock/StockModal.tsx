@@ -6,6 +6,7 @@ import type { InventoryItem } from '@/types'
 
 interface StockModalProps {
   item?: InventoryItem | null
+  catList?: string[]
   onSave: (fields: Omit<InventoryItem, 'id' | 'avg_days' | 'cycle_count'>) => void
   onDelete?: () => void
   onClose: () => void
@@ -26,7 +27,7 @@ function scrollToInput(e: React.FocusEvent) {
   setTimeout(() => (e.target as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)
 }
 
-export default function StockModal({ item, onSave, onDelete, onClose }: StockModalProps) {
+export default function StockModal({ item, catList = [], onSave, onDelete, onClose }: StockModalProps) {
   const [name,       setName]       = useState(item?.name      ?? '')
   const [category,   setCategory]   = useState(item?.category  ?? '')
   const [emoji,      setEmoji]      = useState(item?.emoji     ?? '')
@@ -72,7 +73,11 @@ export default function StockModal({ item, onSave, onDelete, onClose }: StockMod
           <input value={emoji} onChange={e => setEmoji(e.target.value)} placeholder="📦" className="emoji-input" />
         </div>
         <div><label>カテゴリ</label>
-          <input value={category} onChange={e => setCategory(e.target.value)} placeholder="ボディケア" onFocus={scrollToInput} />
+          <input value={category} onChange={e => setCategory(e.target.value)} placeholder="ボディケア"
+            list="stock-cat-list" onFocus={scrollToInput} />
+          <datalist id="stock-cat-list">
+            {catList.map(c => <option key={c} value={c} />)}
+          </datalist>
         </div>
       </div>
       <div className="fg row2">

@@ -62,6 +62,7 @@ export default function NoteDetailModal({ note, onEdit, onDelete, onClose, onTog
                 🛒 買い物リストへ追加
               </button>
             )}
+            <button className="btn-complete" onClick={onDelete}>✓ 完了して削除</button>
             <button className="btn-danger" onClick={() => confirm('削除しますか？') && onDelete()}>削除する</button>
           </>
         }

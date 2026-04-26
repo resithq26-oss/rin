@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Modal from '@/components/ui/Modal'
 import { uid, NOTE_COLOR_SWATCHES } from '@/lib/utils'
 import type { Note, NoteColor, NoteType, ChecklistItem } from '@/types'
@@ -27,9 +27,21 @@ export default function NoteModal({ note, onSave, onDelete, onClose }: NoteModal
     note?.items?.length ? note.items.map(i => ({ ...i })) : []
   )
   const isEdit = !!note
+  const lastItemRef = useRef<HTMLInputElement>(null)
 
-  function addItem() {
-    setItems(its => [...its, { id: uid(), text: '', note: '', checked: false }])
+  function addItem(autoFocus = false) {
+    const newId = uid()
+    setItems(its => [...its, { id: newId, text: '', note: '', checked: false }])
+    if (autoFocus) setTimeout(() => lastItemRef.current?.focus(), 50)
+  }
+
+  function switchToChecklist() {
+    setType('checklist')
+    if (items.length === 0) {
+      const newId = uid()
+      setItems([{ id: newId, text: '', note: '', checked: false }])
+      setTimeout(() => lastItemRef.current?.focus(), 80)
+    }
   }
   function updateItem(id: string, text: string) {
     setItems(its => its.map(i => i.id === id ? { ...i, text } : i))
@@ -65,7 +77,7 @@ export default function NoteModal({ note, onSave, onDelete, onClose }: NoteModal
         <label>種類</label>
         <div style={{ display: 'flex', gap: 8 }}>
           {(['text', 'checklist'] as NoteType[]).map(t => (
-            <button key={t} onClick={() => setType(t)}
+            <button key={t} onClick={() => t === 'checklist' ? switchToChecklist() : setType('text')}
               style={{
                 flex: 1, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer',
                 fontWeight: 700, fontSize: 14,
@@ -103,13 +115,20 @@ export default function NoteModal({ note, onSave, onDelete, onClose }: NoteModal
             {items.map((item, idx) => (
               <div key={item.id} className="note-item-row">
                 <span className="note-item-dot">○</span>
-                <input value={item.text} onChange={e => updateItem(item.id, e.target.value)}
-                  placeholder={`項目 ${idx + 1}`} onFocus={scrollToInput} className="note-item-input" />
+                <input
+                  ref={idx === items.length - 1 ? lastItemRef : undefined}
+                  value={item.text}
+                  onChange={e => updateItem(item.id, e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addItem(true) } }}
+                  placeholder={`項目 ${idx + 1}`}
+                  onFocus={scrollToInput}
+                  className="note-item-input"
+                />
                 <button className="note-item-del" onClick={() => removeItem(item.id)}>✕</button>
               </div>
             ))}
           </div>
-          <button className="note-add-item-btn" onClick={addItem}>＋ 項目を追加</button>
+          <button className="note-add-item-btn" onClick={() => addItem(true)}>＋ 項目を追加</button>
         </div>
       )}
 
