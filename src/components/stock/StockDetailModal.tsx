@@ -5,6 +5,7 @@ import type { InventoryItem } from '@/types'
 
 interface StockDetailModalProps {
   item: InventoryItem
+  isInShopping: boolean
   onClose: () => void
   onEdit: () => void
   onDelete: () => void
@@ -12,7 +13,7 @@ interface StockDetailModalProps {
   onAddToShopping: () => void
 }
 
-export default function StockDetailModal({ item, onClose, onEdit, onDelete, onToggle, onAddToShopping }: StockDetailModalProps) {
+export default function StockDetailModal({ item, isInShopping, onClose, onEdit, onDelete, onToggle, onAddToShopping }: StockDetailModalProps) {
   const noStock = item.stock === 0
 
   return (
@@ -23,9 +24,13 @@ export default function StockDetailModal({ item, onClose, onEdit, onDelete, onTo
         <>
           <button className="btn-primary" onClick={onEdit}>編集する</button>
           {noStock && (
-            <button className="btn-shopping" onClick={() => { onAddToShopping(); onClose() }}>
-              🛒 買い物リストへ追加
-            </button>
+            isInShopping ? (
+              <button className="btn-shopping btn-shopping-done" disabled>🛒 追加済み</button>
+            ) : (
+              <button className="btn-shopping" onClick={() => { onAddToShopping(); onClose() }}>
+                🛒 買い物リストへ追加
+              </button>
+            )
           )}
           <button className="btn-danger" onClick={() => { if (confirm('削除しますか？')) onDelete() }}>削除する</button>
         </>

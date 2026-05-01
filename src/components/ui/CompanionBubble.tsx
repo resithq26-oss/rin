@@ -1,26 +1,26 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
+import { COMPANIONS } from '@/hooks/useCompanion'
 
 interface CompanionBubbleProps {
   message: string
 }
 
-const THEME_ICON: Record<string, string> = { rin: '🌤', night: '🌙', aoi: '💻' }
-
 export function CompanionBubble({ message }: CompanionBubbleProps) {
   const [visible,   setVisible]   = useState(false)
   const [displayed, setDisplayed] = useState(message)
-  const [theme,     setTheme]     = useState<'rin' | 'night' | 'aoi'>('rin')
+  const [companionId, setCompanionId] = useState<string>('aoi')
 
   useEffect(() => {
     const update = () => {
-      const t = document.documentElement.getAttribute('data-theme') || 'rin'
-      setTheme(t as 'rin' | 'night' | 'aoi')
+      const c = document.documentElement.getAttribute('data-companion') || 'aoi'
+      setCompanionId(c)
     }
     update()
     const obs = new MutationObserver(update)
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-companion'] })
     return () => obs.disconnect()
   }, [])
 
@@ -30,9 +30,13 @@ export function CompanionBubble({ message }: CompanionBubbleProps) {
     return () => clearTimeout(t)
   }, [message])
 
+  const def = COMPANIONS.find(c => c.id === companionId) ?? COMPANIONS[0]
+
   return (
     <div className="companion-wrap">
-      <div className="companion-icon-plain">{THEME_ICON[theme] ?? '🌸'}</div>
+      <div className="companion-avatar">
+        <Image src={def.img} alt={def.name} width={48} height={48} className="companion-avatar-img" />
+      </div>
       <div className={`companion-bubble ${visible ? 'visible' : ''}`}>
         {displayed}
       </div>

@@ -23,12 +23,22 @@ function groupBy<T>(arr: T[], key: keyof T): Record<string, T[]> {
 export default function StockPage() {
   const { inventory, setInventory, loading: iLoading } = useInventory()
   const { pickups, setPickups, loading: pLoading }     = usePickups()
-  const [viewItem,  setViewItem]  = useState<InventoryItem | null>(null)
-  const [editItem,  setEditItem]  = useState<InventoryItem | null>(null)
-  const [showAdd,   setShowAdd]   = useState(false)
-  const [catFilter, setCatFilter] = useState('すべて')
+  const [viewItem,      setViewItem]      = useState<InventoryItem | null>(null)
+  const [editItem,      setEditItem]      = useState<InventoryItem | null>(null)
+  const [showAdd,       setShowAdd]       = useState(false)
+  const [catFilter,     setCatFilter]     = useState('すべて')
+  const [expandedCats,  setExpandedCats]  = useState<Set<string>>(new Set())
   const { msg, show: showToast } = useToast()
   const [companion, setCompanion] = useState(MSG.default)
+
+  function toggleCat(cat: string) {
+    setExpandedCats(prev => {
+      const next = new Set(prev)
+      if (next.has(cat)) next.delete(cat)
+      else next.add(cat)
+      return next
+    })
+  }
 
   const loading = iLoading || pLoading
   const cats = ['すべて', ...Array.from(new Set(inventory.map(i => i.category || '未分類').filter(Boolean)))]
@@ -109,37 +119,60 @@ export default function StockPage() {
               <div className="empty-text">在庫データがありません</div>
             </div>
           ) : (
-            Object.entries(allGroups).map(([cat, items]) => (
-              <div key={cat} style={{ margin: '12px 14px 0' }}>
-                <div className="section-label">{cat || '未分類'}</div>
-                <div className="list-card-group">
-                  {items.map(item => {
-                    const noStock = item.stock === 0
-                    return (
-                      <div key={item.id}
-                        className="list-card"
-                        style={{ borderLeft: `4px solid ${noStock ? 'var(--color-danger)' : 'var(--color-success)'}` }}
-                        onClick={() => setViewItem(item)}
-                      >
-                        {item.image_url
-                          ? <img src={item.image_url} alt="" className="item-thumb" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
-                          : <div className="item-icon">{item.emoji || '📦'}</div>}
-                        <div className="item-info">
-                          <div className="item-name">{item.name}</div>
-                          {item.memo && <div className="item-sub">{item.memo}</div>}
-                        </div>
-                        <button
-                          className={`stock-badge ${noStock ? 'stock-out' : 'stock-in'}`}
-                          onClick={e => { e.stopPropagation(); toggleStock(item.id) }}
-                        >
-                          {noStock ? '在庫なし' : 'あり ✓'}
-                        </button>
-                      </div>
-                    )
-                  })}
+            Object.entries(allGroups).map(([cat, items]) => {
+              const isExpanded = expandedCats.has(cat)
+              const outCount   = items.filter(i => i.stock === 0).length
+              return (
+                <div key={cat} style={{ margin: '8px 14px 0' }}>
+                  <button className="accordion-header" onClick={() => toggleCat(cat)}>
+                    <span className="accordion-cat-name">{cat || '未分類'}</span>
+                    {outCount > 0 && (
+                      <span className="accordion-out-badge">{outCount}点在庫なし</span>
+                    )}
+                    <span className="accordion-count">{items.length}点</span>
+                    <span className="accordion-arrow">{isExpanded ? '▲' : '▼'}</span>
+                  </button>
+                  {isExpanded && (
+                    <div className="list-card-group" style={{ marginTop: 4 }}>
+                      {items.map(item => {
+                        const noStock    = item.stock === 0
+                        const inShopping = noStock && pickups.some(p => p.name.trim() === item.name.trim() && p.status === '未完了')
+                        return (
+                          <div key={item.id}
+                            className="list-card"
+                            style={{ borderLeft: `4px solid ${noStock ? 'var(--color-danger)' : 'var(--color-success)'}` }}
+                            onClick={() => setViewItem(item)}
+                          >
+                            {item.image_url
+                              ? <img src={item.image_url} alt="" className={`item-thumb${noStock ? ' depleted' : ''}`} onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
+                              : <div className={`item-icon${noStock ? ' depleted' : ''}`}>{item.emoji || '📦'}</div>}
+                            <div className="item-info">
+                              <div className="item-name">{item.name}</div>
+                              {item.memo && <div className="item-sub">{item.memo}</div>}
+                            </div>
+                            {noStock && (
+                              <button
+                                className={`stock-cart-btn ${inShopping ? 'added' : ''}`}
+                                onClick={e => { e.stopPropagation(); if (!inShopping) addToShopping(item) }}
+                                title={inShopping ? '買い物リスト追加済み' : '買い物リストへ追加'}
+                              >
+                                {inShopping ? '✓済' : '🛒'}
+                              </button>
+                            )}
+                            <button
+                              className={`stock-badge ${noStock ? 'stock-out' : 'stock-in'}`}
+                              onClick={e => { e.stopPropagation(); toggleStock(item.id) }}
+                            >
+                              {noStock ? '在庫なし' : 'あり ✓'}
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </>
       )}
@@ -147,6 +180,7 @@ export default function StockPage() {
       {viewItem && (
         <StockDetailModal
           item={inventory.find(x => x.id === viewItem.id) ?? viewItem}
+          isInShopping={pickups.some(p => p.name.trim() === viewItem.name.trim() && p.status === '未完了')}
           onClose={() => setViewItem(null)}
           onEdit={() => { setEditItem(viewItem); setViewItem(null) }}
           onDelete={() => remove(viewItem.id)}

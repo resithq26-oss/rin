@@ -4,101 +4,85 @@ import { useState } from 'react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
 import NoteCard from '@/components/notes/NoteCard'
-import NoteDetailModal from '@/components/notes/NoteDetailModal'
 import NoteModal from '@/components/notes/NoteModal'
 import { CompanionBubble, getGreeting } from '@/components/ui/CompanionBubble'
+import { MoodRibbon } from '@/components/ui/MoodRibbon'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
-import { uid, getHabitStatus, sortHabits } from '@/lib/utils'
+import { uid, getHabitStatus, sortHabits, completionDate, getNextDueDate } from '@/lib/utils'
 import { useNotes } from '@/hooks/useNotes'
 import { useHabits } from '@/hooks/useHabits'
 import { useInventory } from '@/hooks/useInventory'
-import { usePortalLinks } from '@/hooks/usePortalLinks'
-import type { Note, Habit, PortalLink } from '@/types'
+import { useAppMode } from '@/hooks/useAppMode'
+import type { Note, Habit } from '@/types'
+
+const APPS = [
+  { href: '/notes',    emoji: '📝', label: 'ノート' },
+  { href: '/routines', emoji: '🔄', label: 'ルーティン' },
+  { href: '/shopping', emoji: '🛒', label: '買い物' },
+  { href: '/stock',    emoji: '📦', label: 'ストック' },
+  { href: '/travel',    emoji: '✈️', label: '旅行' },
+  { href: '/disaster',  emoji: '🛡️', label: '防災' },
+  { href: '/wardrobe',  emoji: '👗', label: 'クローゼット' },
+  { href: '/aquarium',  emoji: '🐠', label: '水槽' },
+  { href: '/history',   emoji: '🛍️', label: 'ヒストリー' },
+  { href: '/settings',  emoji: '⚙️', label: '設定' },
+]
 
 function StatusBadge({ habit }: { habit: Habit }) {
   const s = getHabitStatus(habit)
   if (s.type === 'done')    return <span className="badge badge-done">✓ 完了</span>
   if (s.type === 'due')     return <span className="badge badge-due">今日</span>
   if (s.type === 'overdue') return <span className="badge badge-overdue">{s.daysOver ? `${s.daysOver}日遅れ` : '未実施'}</span>
+  if (s.daysLeft === 1)     return <span className="badge badge-due" style={{ opacity: .7 }}>明日</span>
   return <span className="badge badge-upcoming">あと{s.daysLeft}日</span>
-}
-
-function AddLinkModal({ onSave, onClose }: { onSave: (l: Omit<PortalLink, 'id' | 'position'>) => void; onClose: () => void }) {
-  const [title, setTitle] = useState('')
-  const [url,   setUrl]   = useState('')
-  const [emoji, setEmoji] = useState('🔗')
-  const [cat,   setCat]   = useState('other')
-
-  function submit() {
-    if (!title.trim() || !url.trim()) return
-    const u = url.startsWith('http') ? url.trim() : `https://${url.trim()}`
-    onSave({ title: title.trim(), url: u, emoji: emoji.trim() || '🔗', category: cat })
-    onClose()
-  }
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-body">
-          <div className="modal-hdr">
-            <span className="modal-title">リンクを追加</span>
-            <button className="modal-close" onClick={onClose}>✕</button>
-          </div>
-          <div className="fg">
-            <label>絵文字</label>
-            <input className="emoji-input" value={emoji} onChange={e => setEmoji(e.target.value)} maxLength={2} />
-          </div>
-          <div className="fg">
-            <label>タイトル</label>
-            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="例: Gmail" />
-          </div>
-          <div className="fg">
-            <label>URL</label>
-            <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." inputMode="url" />
-          </div>
-          <div className="fg">
-            <label>カテゴリ</label>
-            <select value={cat} onChange={e => setCat(e.target.value)}>
-              <option value="other">その他</option>
-              <option value="work">仕事</option>
-              <option value="aquarium">水槽</option>
-              <option value="baseball">野球</option>
-            </select>
-          </div>
-        </div>
-        <div className="modal-footer">
-          <button className="btn-primary" onClick={submit}>追加する</button>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 export default function PortalPage() {
   const { notes, setNotes, loading: nLoading }   = useNotes()
   const { habits, setHabits, loading: hLoading } = useHabits()
   const { inventory, loading: iLoading }         = useInventory()
-  const { links, setLinks, loading: lLoading }   = usePortalLinks()
-  const [viewNote,   setViewNote]   = useState<Note | null>(null)
-  const [editNote,   setEditNote]   = useState<Note | null>(null)
-  const [showAdd,    setShowAdd]    = useState(false)
-  const [showAddLink, setShowAddLink] = useState(false)
+  const { mode } = useAppMode()
+  const [editNote, setEditNote] = useState<Note | null>(null)
+  const [showAdd,  setShowAdd]  = useState(false)
   const { msg, show: showToast } = useToast()
 
-  const loading = nLoading || hLoading || iLoading || lLoading
-  const dueHabits   = habits.filter(h => ['due', 'overdue'].includes(getHabitStatus(h).type))
+  const loading = nLoading || hLoading || iLoading
+  const scheduledHabits = habits.filter(h => (h.weekday != null && h.interval_days > 0) || !!h.target_date)
+  const scheduledIds    = new Set(scheduledHabits.map(h => h.id))
+  const dueHabits   = habits.filter(h => {
+    if (scheduledIds.has(h.id)) return false
+    const s = getHabitStatus(h)
+    return ['due', 'overdue'].includes(s.type) || (s.type === 'upcoming' && (s.daysLeft ?? 999) <= 1)
+  })
+  const prepHabits  = habits.filter(h => {
+    if (!h.prep_days || h.prep_days <= 0) return false
+    const s = getHabitStatus(h)
+    return s.type === 'upcoming' && s.daysLeft !== undefined && s.daysLeft <= h.prep_days
+  })
   const urgentItems = inventory.filter(i => i.stock === 0 && i.urgent)
-  const pinnedNotes = notes.filter(n => n.pinned)
+  const pinnedNotes = notes.filter(n => n.pinned && !n.archived)
 
-  const currentViewNote = viewNote ? notes.find(n => n.id === viewNote.id) ?? null : null
   const currentEditNote = editNote ? notes.find(n => n.id === editNote.id) ?? editNote : null
 
   async function complete(id: string) {
-    const now = new Date().toISOString()
-    await supabase.from('habits').update({ last_done: now }).eq('id', id)
-    setHabits(hs => sortHabits(hs.map(h => h.id === id ? { ...h, last_done: now } : h)))
+    const habit = habits.find(h => h.id === id)
+    if (!habit) return
+    const now = completionDate(habit)
+    const isAppointment = !!habit.target_date
+    const update: Record<string, unknown> = { last_done: now }
+    if (isAppointment) { update.target_date = null; update.booked = false }
+    await supabase.from('habits').update(update).eq('id', id)
+    setHabits(hs => sortHabits(hs.map(h => h.id === id
+      ? { ...h, last_done: now, ...(isAppointment ? { target_date: null, booked: false } : {}) }
+      : h)))
     showToast('✓ 完了しました')
+  }
+
+  async function bookHabit(id: string) {
+    await supabase.from('habits').update({ booked: true }).eq('id', id)
+    setHabits(hs => hs.map(h => h.id === id ? { ...h, booked: true } : h))
+    showToast('✓ 予約済みにしました')
   }
 
   async function saveNote(fields: Omit<Note, 'id' | 'created_at' | 'updated_at'>) {
@@ -120,32 +104,13 @@ export default function PortalPage() {
   async function removeNote(id: string) {
     await supabase.from('notes').delete().eq('id', id)
     setNotes(ns => ns.filter(n => n.id !== id))
-    setViewNote(null)
     showToast('削除しました')
   }
 
-  async function toggleNoteItem(noteId: string, itemId: string) {
-    const note = notes.find(n => n.id === noteId)
-    if (!note) return
-    const items = note.items.map(i => i.id === itemId ? { ...i, checked: !i.checked } : i)
-    const now = new Date().toISOString()
-    await supabase.from('notes').update({ items, updated_at: now }).eq('id', noteId)
-    setNotes(ns => ns.map(n => n.id === noteId ? { ...n, items, updated_at: now } : n))
-  }
-
-  async function addLink(fields: Omit<PortalLink, 'id' | 'position'>) {
-    const pos = links.length
-    const row: PortalLink = { id: uid(), position: pos, ...fields }
-    await supabase.from('portal_links').insert([row])
-    setLinks(ls => [...ls, row])
-    showToast('リンクを追加しました')
-  }
-
-  async function removeLink(id: string) {
-    if (!confirm('このリンクを削除しますか？')) return
-    await supabase.from('portal_links').delete().eq('id', id)
-    setLinks(ls => ls.filter(l => l.id !== id))
-    showToast('削除しました')
+  async function archiveNote(id: string) {
+    await supabase.from('notes').update({ archived: true }).eq('id', id)
+    setNotes(ns => ns.filter(n => n.id !== id))
+    showToast('アーカイブしました')
   }
 
   const action = <button className="hdr-add-btn" onClick={() => setShowAdd(true)}>＋ メモ</button>
@@ -156,39 +121,119 @@ export default function PortalPage() {
         <div className="empty"><div className="spinner" /></div>
       ) : (
         <>
-          <CompanionBubble message={getGreeting()} />
+          {mode === 'companion' && <CompanionBubble message={getGreeting()} />}
+          {mode === 'companion' && <MoodRibbon />}
 
-          {/* クイックリンク */}
+          {/* アプリ一覧 */}
           <div className="today-section">
-            <div className="today-section-label">
-              🔗 <span>クイックリンク</span>
-              <button
-                onClick={() => setShowAddLink(true)}
-                style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--color-primary)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                ＋ 追加
-              </button>
-            </div>
+            <div className="today-section-label">🗂️ <span>アプリ</span></div>
             <div className="portal-links-grid">
-              {links.map(link => (
-                <a
-                  key={link.id}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="portal-link-btn"
-                  onContextMenu={e => { e.preventDefault(); removeLink(link.id) }}
-                >
-                  <span className="portal-link-emoji">{link.emoji}</span>
-                  <span className="portal-link-label">{link.title}</span>
-                </a>
+              {APPS.map(app => (
+                <Link key={app.href} href={app.href} className="portal-link-btn">
+                  <span className="portal-link-emoji">{app.emoji}</span>
+                  <span className="portal-link-label">{app.label}</span>
+                </Link>
               ))}
-              <button className="portal-add-btn" onClick={() => setShowAddLink(true)}>
-                <span className="portal-add-icon">＋</span>
-                <span>追加</span>
-              </button>
             </div>
           </div>
+
+          {/* 準備リマインダー */}
+          {prepHabits.length > 0 && (
+            <div className="today-section">
+              <div className="today-section-label">
+                🔔 <span>そろそろ準備しよう</span>
+                <Link href="/routines" style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--color-primary)', fontWeight: 700, textDecoration: 'none' }}>すべて見る</Link>
+              </div>
+              <div className="list-card-group">
+                {prepHabits.map(habit => {
+                  const s = getHabitStatus(habit)
+                  return (
+                    <div key={habit.id} className="prep-alert-card">
+                      <div className="prep-alert-emoji">{habit.emoji || '📌'}</div>
+                      <div className="prep-alert-info">
+                        <div className="prep-alert-name">{habit.name}</div>
+                        <div className="prep-alert-sub">
+                          あと{s.daysLeft}日
+                          {habit.prep_note ? ` · ${habit.prep_note}` : ''}
+                        </div>
+                      </div>
+                      <span className="prep-alert-badge">準備して</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 日程管理（曜日固定 + 予定日指定ルーティン） */}
+          {scheduledHabits.length > 0 && (
+            <div className="today-section">
+              <div className="today-section-label">
+                📅 <span>次の予定</span>
+                <Link href="/routines" style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--color-primary)', fontWeight: 700, textDecoration: 'none' }}>すべて見る</Link>
+              </div>
+              <div className="list-card-group">
+                {scheduledHabits.map(habit => {
+                  const WD = '日月火水木金土'
+
+                  // 予定日指定タイプ（target_date）
+                  if (habit.target_date) {
+                    const target = new Date(habit.target_date)
+                    target.setHours(0, 0, 0, 0)
+                    const today = new Date(); today.setHours(0, 0, 0, 0)
+                    const daysLeft = Math.round((target.getTime() - today.getTime()) / 86400000)
+                    const dateStr  = `${target.getMonth() + 1}/${target.getDate()}(${WD[target.getDay()]})`
+                    const isUrgent = daysLeft <= 7 && !habit.booked
+                    const isPast   = daysLeft < 0
+                    return (
+                      <div key={habit.id} className={`habit-card scheduled appointment${isUrgent ? ' appointment-urgent' : ''}`}>
+                        <div className="habit-icon">{habit.emoji || '📌'}</div>
+                        <div className="habit-info">
+                          <div className="habit-name">{habit.name}</div>
+                          <div className="habit-sub">
+                            {isPast ? '期限切れ' : `${dateStr}（あと${daysLeft}日）`}
+                            {isUrgent && <span className="appt-urgent-tag"> ⚠️ 未予約</span>}
+                          </div>
+                        </div>
+                        {habit.booked
+                          ? <span className="badge badge-done">✓ 予約済</span>
+                          : <button className="book-btn" onClick={() => bookHabit(habit.id)}>予約した！</button>
+                        }
+                        <button className="complete-btn" onClick={() => complete(habit.id)}>完了！</button>
+                      </div>
+                    )
+                  }
+
+                  // 曜日固定タイプ
+                  const s    = getHabitStatus(habit)
+                  const next = getNextDueDate(habit)
+                  const dateStr = next
+                    ? `${next.getMonth() + 1}/${next.getDate()}(${WD[next.getDay()]})`
+                    : ''
+                  const isDone = s.type === 'done'
+                  return (
+                    <div key={habit.id} className={`habit-card scheduled ${s.type}`} style={{ opacity: isDone ? .65 : 1 }}>
+                      <div className="habit-icon">{habit.emoji || '📌'}</div>
+                      <div className="habit-info">
+                        <div className="habit-name">{habit.name}</div>
+                        <div className="habit-sub">
+                          次: <strong>{dateStr}</strong>
+                          {!isDone && s.daysLeft != null ? `（あと${s.daysLeft}日）` : ''}
+                        </div>
+                      </div>
+                      {isDone
+                        ? <span className="badge badge-done">✓ 完了</span>
+                        : <StatusBadge habit={habit} />
+                      }
+                      {!isDone && (
+                        <button className="complete-btn" onClick={() => complete(habit.id)}>完了！</button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Due Habits */}
           {dueHabits.length > 0 && (
@@ -207,6 +252,7 @@ export default function PortalPage() {
                         <div className="habit-name">{habit.name}</div>
                         <div className="habit-sub">
                           {habit.interval_days === 0 ? '一回限り' : habit.interval_days === 1 ? '毎日' : `${habit.interval_days}日ごと`}
+                          {habit.weekday != null ? ` · ${'日月火水木金土'[habit.weekday]}曜日` : ''}
                           {habit.category ? ` · ${habit.category}` : ''}
                         </div>
                       </div>
@@ -250,13 +296,13 @@ export default function PortalPage() {
               </div>
               <div className="notes-grid" style={{ padding: 0 }}>
                 {pinnedNotes.map(note => (
-                  <NoteCard key={note.id} note={note} onClick={() => setViewNote(note)} />
+                  <NoteCard key={note.id} note={note} onClick={() => setEditNote(note)} onDismiss={() => archiveNote(note.id)} />
                 ))}
               </div>
             </div>
           )}
 
-          {links.length === 0 && dueHabits.length === 0 && urgentItems.length === 0 && pinnedNotes.length === 0 && (
+          {dueHabits.length === 0 && prepHabits.length === 0 && urgentItems.length === 0 && pinnedNotes.length === 0 && (
             <div className="empty">
               <div className="empty-icon">✨</div>
               <div className="empty-text">今日はすべて OK！</div>
@@ -266,24 +312,12 @@ export default function PortalPage() {
         </>
       )}
 
-      {currentViewNote && (
-        <NoteDetailModal
-          note={currentViewNote}
-          onEdit={() => { setEditNote(currentViewNote); setViewNote(null) }}
-          onDelete={() => removeNote(currentViewNote.id)}
-          onClose={() => setViewNote(null)}
-          onToggleItem={toggleNoteItem}
-        />
-      )}
       {(showAdd || editNote) && (
         <NoteModal
           note={currentEditNote}
           onSave={saveNote}
           onClose={() => { setShowAdd(false); setEditNote(null) }}
         />
-      )}
-      {showAddLink && (
-        <AddLinkModal onSave={addLink} onClose={() => setShowAddLink(false)} />
       )}
       <Toast msg={msg} />
     </AppShell>

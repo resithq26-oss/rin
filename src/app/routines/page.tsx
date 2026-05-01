@@ -7,7 +7,7 @@ import SwipeRow from '@/components/ui/SwipeRow'
 import { CompanionBubble, MSG } from '@/components/ui/CompanionBubble'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
-import { uid, getHabitStatus, sortHabits } from '@/lib/utils'
+import { uid, getHabitStatus, sortHabits, completionDate } from '@/lib/utils'
 import { useHabits } from '@/hooks/useHabits'
 import type { Habit } from '@/types'
 
@@ -27,28 +27,55 @@ export default function RoutinesPage() {
   const [companion, setCompanion] = useState(MSG.default)
 
   const complete = useCallback(async (id: string) => {
-    const now = new Date().toISOString()
-    await supabase.from('habits').update({ last_done: now }).eq('id', id)
+    const habit = habits.find(h => h.id === id)
+    if (!habit) return
+    const now = completionDate(habit)
+    const isAppointment = !!habit.target_date
+    const update: Record<string, unknown> = { last_done: now }
+    if (isAppointment) { update.target_date = null; update.booked = false }
+    await supabase.from('habits').update(update).eq('id', id)
     setHabits(hs => {
-      const next = sortHabits(hs.map(h => h.id === id ? { ...h, last_done: now } : h))
+      const next = sortHabits(hs.map(h => h.id === id
+        ? { ...h, last_done: now, ...(isAppointment ? { target_date: null, booked: false } : {}) }
+        : h))
       const allDone = next.every(h => getHabitStatus(h).type === 'done')
       setCompanion(allDone ? MSG.allHabitsDone : MSG.habitDone)
       return next
     })
     showToast('✓ 完了しました')
-  }, [setHabits, showToast])
+  }, [habits, setHabits, showToast])
 
   const save = useCallback(async (fields: Omit<Habit, 'id'>) => {
+    const { prep_days, prep_note, ...baseFields } = fields
+    const { prep_days: _pd, prep_note: _pn, ...safe } = fields as Record<string, unknown>
+    const tryInsert = async (payload: Record<string, unknown>) => {
+      const { error } = await supabase.from('habits').insert([payload])
+      if (error) {
+        const { error: e2 } = await supabase.from('habits').insert([safe])
+        return e2
+      }
+      return null
+    }
+    const tryUpdate = async (payload: Record<string, unknown>, id: string) => {
+      const { error } = await supabase.from('habits').update(payload).eq('id', id)
+      if (error) {
+        const { error: e2 } = await supabase.from('habits').update(safe).eq('id', id)
+        return e2
+      }
+      return null
+    }
+
     if (editHabit) {
-      await supabase.from('habits').update(fields).eq('id', editHabit.id)
+      const err = await tryUpdate({ ...baseFields, prep_days, prep_note }, editHabit.id)
+      if (err) { showToast('保存に失敗しました'); return }
       setHabits(hs => sortHabits(hs.map(h => h.id === editHabit.id ? { ...h, ...fields } : h)))
       setEditHabit(null)
       showToast('更新しました')
     } else {
       const id = uid()
-      const row: Habit = { id, ...fields }
-      await supabase.from('habits').insert([row])
-      setHabits(hs => sortHabits([...hs, row]))
+      const err = await tryInsert({ id, ...baseFields, prep_days, prep_note })
+      if (err) { showToast('保存に失敗しました'); return }
+      setHabits(hs => sortHabits([...hs, { id, ...fields }]))
       setShowAdd(false)
       setCompanion(MSG.habitAdded)
       showToast('追加しました')
@@ -101,6 +128,7 @@ export default function RoutinesPage() {
                       <div className="habit-name">{habit.name}</div>
                       <div className="habit-sub">
                         {habit.interval_days === 0 ? '一回限り' : habit.interval_days === 1 ? '毎日' : `${habit.interval_days}日ごと`}
+                        {habit.weekday != null ? ` · ${'日月火水木金土'[habit.weekday]}曜日` : ''}
                         {habit.category ? ` · ${habit.category}` : ''}
                       </div>
                     </div>

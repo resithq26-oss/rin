@@ -4,24 +4,30 @@ import { useState, useCallback } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import NoteCard from '@/components/notes/NoteCard'
 import NoteModal from '@/components/notes/NoteModal'
-import NoteDetailModal from '@/components/notes/NoteDetailModal'
 import InlineNoteInput from '@/components/notes/InlineNoteInput'
 import { CompanionBubble, MSG } from '@/components/ui/CompanionBubble'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { supabase } from '@/lib/supabase'
 import { uid } from '@/lib/utils'
+import { useAppMode } from '@/hooks/useAppMode'
 import type { Note } from '@/types'
 import { useNotes } from '@/hooks/useNotes'
 
 export default function NotesPage() {
   const { notes, setNotes, loading } = useNotes()
+  const { mode } = useAppMode()
   const [editNote, setEditNote] = useState<Note | null>(null)
-  const [viewNote, setViewNote] = useState<Note | null>(null)
+  const [showAdd,  setShowAdd]  = useState(false)
+  const [showArchive, setShowArchive] = useState(false)
   const [companion, setCompanion] = useState(notes.length === 0 ? MSG.noteEmpty : MSG.default)
   const { msg, show: showToast } = useToast()
 
-  const currentViewNote = viewNote ? notes.find(n => n.id === viewNote.id) ?? null : null
   const currentEditNote = editNote ? notes.find(n => n.id === editNote.id) ?? editNote : null
+
+  const activeNotes   = notes.filter(n => !n.archived)
+  const archivedNotes = notes.filter(n => n.archived)
+  const pinned   = activeNotes.filter(n => n.pinned)
+  const unpinned = activeNotes.filter(n => !n.pinned)
 
   const save = useCallback(async (fields: Omit<Note, 'id' | 'created_at' | 'updated_at'>) => {
     const now = new Date().toISOString()
@@ -38,6 +44,7 @@ export default function NotesPage() {
       const { error } = await supabase.from('notes').insert([row])
       if (error) { console.error('notes insert error:', error); showToast(error.message); return }
       setNotes(ns => [row, ...ns])
+      setShowAdd(false)
       setCompanion(MSG.noteAdded)
       showToast('追加しました')
     }
@@ -47,9 +54,21 @@ export default function NotesPage() {
     await supabase.from('notes').delete().eq('id', id)
     setNotes(ns => ns.filter(n => n.id !== id))
     setEditNote(null)
-    setViewNote(null)
     setCompanion(MSG.noteDeleted)
     showToast('削除しました')
+  }, [setNotes, showToast])
+
+  const archiveNote = useCallback(async (id: string) => {
+    await supabase.from('notes').update({ archived: true }).eq('id', id)
+    setNotes(ns => ns.map(n => n.id === id ? { ...n, archived: true } : n))
+    setCompanion(MSG.noteDeleted)
+    showToast('アーカイブしました')
+  }, [setNotes, showToast])
+
+  const unarchiveNote = useCallback(async (id: string) => {
+    await supabase.from('notes').update({ archived: false }).eq('id', id)
+    setNotes(ns => ns.map(n => n.id === id ? { ...n, archived: false } : n))
+    showToast('元に戻しました')
   }, [setNotes, showToast])
 
   const remove = useCallback(async () => {
@@ -57,28 +76,18 @@ export default function NotesPage() {
     await removeNote(editNote.id)
   }, [editNote, removeNote])
 
-  const toggleItem = useCallback(async (noteId: string, itemId: string) => {
-    const note = notes.find(n => n.id === noteId)
-    if (!note) return
-    const items = note.items.map(i => i.id === itemId ? { ...i, checked: !i.checked } : i)
-    const now = new Date().toISOString()
-    await supabase.from('notes').update({ items, updated_at: now }).eq('id', noteId)
-    setNotes(ns => ns.map(n => n.id === noteId ? { ...n, items, updated_at: now } : n))
-  }, [notes, setNotes])
-
-  const pinned   = notes.filter(n => n.pinned)
-  const unpinned = notes.filter(n => !n.pinned)
+  const action = <button className="hdr-add-btn" onClick={() => setShowAdd(true)}>＋ 追加</button>
 
   return (
-    <AppShell title="📝 ノート">
-      <CompanionBubble message={loading ? MSG.default : companion} />
+    <AppShell title="📝 ノート" action={action}>
+      {mode === 'companion' && <CompanionBubble message={loading ? MSG.default : companion} />}
 
       {/* インライン入力 */}
       <InlineNoteInput onSave={save} />
 
       {loading ? (
         <div className="empty"><div className="spinner" /></div>
-      ) : notes.length === 0 ? (
+      ) : activeNotes.length === 0 && archivedNotes.length === 0 ? (
         <div className="empty" style={{ minHeight: '30vh' }}>
           <div className="empty-icon">📝</div>
           <div className="empty-text">まだ何もないよ</div>
@@ -93,7 +102,7 @@ export default function NotesPage() {
               </div>
               <div className="notes-grid">
                 {pinned.map(note => (
-                  <NoteCard key={note.id} note={note} onClick={() => setViewNote(note)} />
+                  <NoteCard key={note.id} note={note} onClick={() => setEditNote(note)} onDismiss={() => archiveNote(note.id)} />
                 ))}
               </div>
             </>
@@ -107,29 +116,45 @@ export default function NotesPage() {
               )}
               <div className="notes-grid">
                 {unpinned.map(note => (
-                  <NoteCard key={note.id} note={note} onClick={() => setViewNote(note)} />
+                  <NoteCard key={note.id} note={note} onClick={() => setEditNote(note)} onDismiss={() => archiveNote(note.id)} />
                 ))}
               </div>
             </>
           )}
+
+          {/* アーカイブセクション */}
+          {archivedNotes.length > 0 && (
+            <div style={{ padding: '16px 16px 0' }}>
+              <button
+                className="archive-toggle-btn"
+                onClick={() => setShowArchive(o => !o)}
+              >
+                📂 アーカイブ（{archivedNotes.length}件）{showArchive ? ' ▲' : ' ▼'}
+              </button>
+              {showArchive && (
+                <div className="notes-grid" style={{ marginTop: 8 }}>
+                  {archivedNotes.map(note => (
+                    <div key={note.id} className="archived-note-wrap">
+                      <NoteCard note={note} onClick={() => {}} />
+                      <div className="archived-note-actions">
+                        <button onClick={() => unarchiveNote(note.id)} className="archive-action-btn restore">戻す</button>
+                        <button onClick={() => removeNote(note.id)} className="archive-action-btn delete">削除</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
-      {editNote && (
+      {(showAdd || editNote) && (
         <NoteModal
-          note={currentEditNote}
+          note={showAdd ? null : currentEditNote}
           onSave={save}
-          onDelete={remove}
-          onClose={() => setEditNote(null)}
-        />
-      )}
-      {currentViewNote && (
-        <NoteDetailModal
-          note={currentViewNote}
-          onEdit={() => { setEditNote(currentViewNote); setViewNote(null) }}
-          onDelete={() => removeNote(currentViewNote.id)}
-          onClose={() => setViewNote(null)}
-          onToggleItem={toggleItem}
+          onDelete={editNote ? remove : undefined}
+          onClose={() => { setShowAdd(false); setEditNote(null) }}
         />
       )}
       <Toast msg={msg} />

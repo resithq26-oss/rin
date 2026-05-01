@@ -1,13 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6b8fff"/>
-      <stop offset="100%" stop-color="#4f6ef7"/>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
     </linearGradient>
-    <clipPath id="r">
-      <rect width="64" height="64" rx="16"/>
-    </clipPath>
+    <linearGradient id="star" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#c7d2fe" stop-opacity=".9"/>
+    </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="16" fill="url(#g)"/>
-  <text x="32" y="46" text-anchor="middle" font-family="Hiragino Sans, sans-serif" font-size="36" font-weight="700" fill="white">凛</text>
+  <!-- 背景 -->
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <!-- ✦ 四角スター -->
+  <path d="M32 8 L36.5 27.5 L56 32 L36.5 36.5 L32 56 L27.5 36.5 L8 32 L27.5 27.5 Z"
+        fill="url(#star)"/>
 </svg>

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { Note } from '@/types'
 
 const COLOR_MAP: Record<string, string> = {
@@ -17,15 +18,26 @@ const COLOR_MAP: Record<string, string> = {
 interface NoteCardProps {
   note: Note
   onClick: () => void
+  onDismiss?: () => void
 }
 
-export default function NoteCard({ note, onClick }: NoteCardProps) {
+export default function NoteCard({ note, onClick, onDismiss }: NoteCardProps) {
+  const [peeling, setPeeling] = useState(false)
   const colorClass = COLOR_MAP[note.color] ?? 'note-color-default'
   const checkedCount = note.items.filter(i => i.checked).length
   const total = note.items.length
 
+  function handleDismiss(e: React.MouseEvent) {
+    e.stopPropagation()
+    setPeeling(true)
+    setTimeout(() => onDismiss?.(), 260)
+  }
+
   return (
-    <div className="note-card-wrap">
+    <div className={`note-card-wrap${peeling ? ' peeling' : ''}`}>
+      {onDismiss && (
+        <button className="note-dismiss-btn" onClick={handleDismiss} title="アーカイブ">✕</button>
+      )}
       <button className={`note-card ${colorClass}`} onClick={onClick}>
         {note.pinned && <div className="note-pin">📌</div>}
         {note.category && <div className="note-category">🏷 {note.category}</div>}

@@ -2,12 +2,13 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faHouse, faStickyNote, faRotate, faCartShopping, faBox, faGear } from '@fortawesome/free-solid-svg-icons'
+import { faHouse, faStickyNote, faRotate, faCartShopping, faBox, faGear, faPlane, faShieldHalved, faShirt, faReceipt, faFish } from '@fortawesome/free-solid-svg-icons'
 import { supabase } from '@/lib/supabase'
 import { getHabitStatus } from '@/lib/utils'
 import type { Habit } from '@/types'
+import RightPanel from './RightPanel'
 
 const NAV_ITEMS = [
   { href: '/',         icon: faHouse,        label: 'ホーム' },
@@ -15,7 +16,12 @@ const NAV_ITEMS = [
   { href: '/routines', icon: faRotate,       label: 'ルーティン' },
   { href: '/shopping', icon: faCartShopping, label: '買い物' },
   { href: '/stock',    icon: faBox,          label: 'ストック' },
-  { href: '/settings', icon: faGear,         label: '設定' },
+  { href: '/travel',    icon: faPlane,        label: '旅行' },
+  { href: '/disaster',  icon: faShieldHalved, label: '防災' },
+  { href: '/wardrobe',  icon: faShirt,        label: 'クローゼット' },
+  { href: '/aquarium',  icon: faFish,         label: '水槽' },
+  { href: '/history',   icon: faReceipt,      label: 'ヒストリー' },
+  { href: '/settings',  icon: faGear,         label: '設定' },
 ]
 
 interface AppShellProps {
@@ -27,6 +33,12 @@ interface AppShellProps {
 export default function AppShell({ children, title, action }: AppShellProps) {
   const pathname = usePathname()
   const [badges, setBadges] = useState<Record<string, number>>({})
+  const navRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    const active = navRef.current?.querySelector<HTMLElement>('.nav-item.active')
+    active?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }, [pathname])
 
   useEffect(() => {
     async function fetchBadges() {
@@ -35,8 +47,11 @@ export default function AppShell({ children, title, action }: AppShellProps) {
         supabase.from('pickups').select('id', { count: 'exact', head: true }).eq('status', '未完了'),
         supabase.from('inventory').select('id', { count: 'exact', head: true }).eq('stock', 0).eq('urgent', true),
       ])
-      const dueCount = ((habitsRes.data ?? []) as Pick<Habit, 'interval_days' | 'last_done'>[])
-        .filter(h => ['due', 'overdue'].includes(getHabitStatus(h as Habit).type)).length
+      const dueCount = ((habitsRes.data ?? []) as Habit[])
+        .filter(h => {
+          const s = getHabitStatus(h)
+          return ['due', 'overdue'].includes(s.type) || (s.type === 'upcoming' && (s.daysLeft ?? 999) <= 1)
+        }).length
       setBadges({
         '/routines': dueCount,
         '/shopping': pickupsRes.count ?? 0,
@@ -85,25 +100,28 @@ export default function AppShell({ children, title, action }: AppShellProps) {
           {action}
         </header>
 
-        <main className="main-scroll">
-          {children}
-        </main>
-      </div>
+        {/* アプリスイッチャー（モバイルのみ） */}
+        <nav className="bottom-nav" ref={navRef}>
+          {navItems.map(item => (
+            <Link key={item.href} href={item.href} className={`nav-item ${item.active ? 'active' : ''}`}>
+              <span className="nav-icon-wrap">
+                <FontAwesomeIcon icon={item.icon} style={{ fontSize: 18 }} />
+                {item.count != null && item.count > 0 && (
+                  <span className="nav-badge">{item.count}</span>
+                )}
+              </span>
+              {item.label}
+            </Link>
+          ))}
+        </nav>
 
-      {/* モバイル フローティングナビ */}
-      <nav className="bottom-nav">
-        {navItems.map(item => (
-          <Link key={item.href} href={item.href} className={`nav-item ${item.active ? 'active' : ''}`}>
-            <span className="nav-icon-wrap">
-              <FontAwesomeIcon icon={item.icon} style={{ fontSize: 18 }} />
-              {item.count != null && item.count > 0 && (
-                <span className="nav-badge">{item.count}</span>
-              )}
-            </span>
-            {item.label}
-          </Link>
-        ))}
-      </nav>
+        <div className="content-area">
+          <main className="main-scroll">
+            {children}
+          </main>
+          <RightPanel />
+        </div>
+      </div>
     </div>
   )
 }

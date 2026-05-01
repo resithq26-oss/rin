@@ -10,42 +10,53 @@ import { uid } from '@/lib/utils'
 import { usePickups, useInventory } from '@/hooks/useInventory'
 import type { Pickup } from '@/types'
 
-function groupBy<T>(arr: T[], key: keyof T): Record<string, T[]> {
-  return arr.reduce((acc, item) => {
-    const k = String(item[key] || '未分類')
-    if (!acc[k]) acc[k] = []
-    acc[k].push(item)
-    return acc
-  }, {} as Record<string, T[]>)
-}
-
 export default function ShoppingPage() {
   const { pickups, setPickups, loading: pLoading } = usePickups()
   const { inventory, loading: iLoading } = useInventory()
-  const [editPickup, setEditPickup] = useState<Pickup | null>(null)
-  const [quickName, setQuickName] = useState('')
-  const quickRef = useRef<HTMLInputElement>(null)
+  const [editPickup,   setEditPickup]   = useState<Pickup | null>(null)
+  const [openSwipeId,  setOpenSwipeId]  = useState<string | null>(null)
+  const [togglingId,   setTogglingId]   = useState<string | null>(null)
+  const [quickName,    setQuickName]    = useState('')
+  const quickRef    = useRef<HTMLInputElement>(null)
+  const touchStartX = useRef(0)
   const { msg, show: showToast } = useToast()
   const [companion, setCompanion] = useState(MSG.default)
 
   const loading = pLoading || iLoading
-  const visible = pickups.filter(p => p.status === '未完了')
+  const visible       = pickups.filter(p => p.status === '未完了')
+  const myItems       = visible.filter(p => !p.delegate)
+  const delegateItems = visible.filter(p => !!p.delegate)
   const catList = Array.from(new Set(pickups.map(p => p.category).filter(Boolean)))
 
   const toggle = useCallback(async (id: string) => {
+    if (togglingId === id) return
     const p = pickups.find(x => x.id === id)
     if (!p) return
-    const linked = inventory.some(i => i.name === p.name)
-    if (linked) {
-      await supabase.from('pickups').update({ status: '完了' }).eq('id', id)
+    setTogglingId(id)
+    const linkedItem = inventory.find(i => i.name === p.name)
+    if (linkedItem) {
+      await Promise.all([
+        supabase.from('pickups').update({ status: '完了' }).eq('id', id),
+        supabase.from('inventory').update({ stock: linkedItem.stock + 1 }).eq('id', linkedItem.id),
+      ])
       setPickups(ps => ps.map(x => x.id === id ? { ...x, status: '完了' } : x))
+      showToast('✓ 購入済み・在庫を更新しました')
     } else {
       await supabase.from('pickups').delete().eq('id', id)
       setPickups(ps => ps.filter(x => x.id !== id))
+      showToast('✓ 購入済みにしました')
     }
+    setTogglingId(null)
     setCompanion(MSG.itemBought)
-    showToast('✓ 購入済みにしました')
-  }, [pickups, inventory, setPickups, showToast])
+  }, [togglingId, pickups, inventory, setPickups, showToast])
+
+  const toggleDelegate = useCallback(async (id: string) => {
+    const p = pickups.find(x => x.id === id)
+    if (!p) return
+    const delegate = !p.delegate
+    await supabase.from('pickups').update({ delegate }).eq('id', id)
+    setPickups(ps => ps.map(x => x.id === id ? { ...x, delegate } : x))
+  }, [pickups, setPickups])
 
   const quickAdd = useCallback(async () => {
     const name = quickName.trim()
@@ -73,10 +84,63 @@ export default function ShoppingPage() {
     await supabase.from('pickups').delete().eq('id', id)
     setPickups(ps => ps.filter(x => x.id !== id))
     setEditPickup(null)
+    setOpenSwipeId(null)
     showToast('削除しました')
   }, [setPickups, showToast])
 
-  const groups = groupBy(visible, 'category')
+  function copyDelegateList() {
+    const lines = delegateItems.map(p => `・${p.name}`).join('\n')
+    const text = `🛒 買い物お願い！\n\n${lines}`
+    navigator.clipboard.writeText(text).then(() => showToast('📋 コピーしました'))
+  }
+
+  function onTouchStart(id: string, e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX
+    if (openSwipeId !== null && openSwipeId !== id) setOpenSwipeId(null)
+  }
+
+  function onTouchEnd(id: string, e: React.TouchEvent) {
+    const dx = touchStartX.current - e.changedTouches[0].clientX
+    if (dx > 55) {
+      setOpenSwipeId(id)
+    } else if (dx < -20 && openSwipeId === id) {
+      setOpenSwipeId(null)
+    }
+  }
+
+  function renderItem(p: Pickup) {
+    const isOpen = openSwipeId === p.id
+    return (
+      <div
+        key={p.id}
+        className="shop-swipe-wrap"
+        onTouchStart={e => onTouchStart(p.id, e)}
+        onTouchEnd={e => onTouchEnd(p.id, e)}
+      >
+        <div
+          className="shop-item"
+          style={{ transform: isOpen ? 'translateX(-72px)' : 'translateX(0)' }}
+        >
+          <div className="shop-item-icon">{p.emoji || '🛒'}</div>
+          <div className="shop-item-name" onClick={() => { if (isOpen) setOpenSwipeId(null); else setEditPickup(p) }}>
+            {p.name}
+          </div>
+          <button
+            className={`delegate-btn ${p.delegate ? 'on' : ''}`}
+            onClick={() => toggleDelegate(p.id)}
+            title="人に頼む"
+          >🙏</button>
+          <button
+            className={`check-btn ${togglingId === p.id ? 'done' : ''}`}
+            onClick={() => toggle(p.id)}
+          >✓</button>
+        </div>
+        <button className="shop-delete-reveal" onClick={() => remove(p.id)}>
+          🗑<br /><span>削除</span>
+        </button>
+      </div>
+    )
+  }
 
   return (
     <AppShell title="🛒 買い物">
@@ -104,28 +168,24 @@ export default function ShoppingPage() {
           <div className="empty-sub">上の入力欄からすぐに追加できます</div>
         </div>
       ) : (
-        Object.entries(groups).map(([cat, items]) => (
-          <div key={cat} style={{ margin: '12px 14px 0' }}>
-            <div className="section-label">{cat || '未分類'}</div>
-            <div className="list-card-group">
-              {items.map(p => (
-                <div key={p.id} className="list-card">
-                  {p.image_url
-                    ? <img src={p.image_url} alt="" className="item-thumb" onError={e => (e.target as HTMLImageElement).style.display = 'none'} />
-                    : <div className="item-icon">{p.emoji || '🛒'}</div>}
-                  <div className="item-info" onClick={() => setEditPickup(p)} style={{ cursor: 'pointer' }}>
-                    <div className="item-name">{p.name}</div>
-                    {p.category && <div className="item-sub">{p.category}</div>}
-                  </div>
-                  <button
-                    className="check-btn"
-                    onClick={() => toggle(p.id)}
-                  >✓</button>
-                </div>
-              ))}
+        <div style={{ margin: '12px 14px 0' }}>
+          {myItems.length > 0 && (
+            <div className="shop-list">
+              {myItems.map(p => renderItem(p))}
             </div>
-          </div>
-        ))
+          )}
+          {delegateItems.length > 0 && (
+            <div style={{ marginTop: myItems.length > 0 ? 20 : 0 }}>
+              <div className="shop-delegate-hdr">
+                <span>🙏 人に頼む</span>
+                <button className="copy-btn" onClick={copyDelegateList}>📋 コピー</button>
+              </div>
+              <div className="shop-list">
+                {delegateItems.map(p => renderItem(p))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {editPickup && (

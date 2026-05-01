@@ -38,11 +38,24 @@ export default function NoteModal({ note, onSave, onDelete, onClose }: NoteModal
   function switchToChecklist() {
     setType('checklist')
     if (items.length === 0) {
-      const newId = uid()
-      setItems([{ id: newId, text: '', note: '', checked: false }])
-      setTimeout(() => lastItemRef.current?.focus(), 80)
+      const lines = content.split('\n').filter(l => l.trim())
+      if (lines.length > 0) {
+        setItems(lines.map(l => ({ id: uid(), text: l.trim(), note: '', checked: false })))
+        setContent('')
+      } else {
+        setItems([{ id: uid(), text: '', note: '', checked: false }])
+        setTimeout(() => lastItemRef.current?.focus(), 80)
+      }
     }
   }
+
+  function switchToText() {
+    if (!content.trim() && items.length > 0) {
+      setContent(items.map(i => i.text).filter(Boolean).join('\n'))
+    }
+    setType('text')
+  }
+
   function updateItem(id: string, text: string) {
     setItems(its => its.map(i => i.id === id ? { ...i, text } : i))
   }
@@ -77,7 +90,7 @@ export default function NoteModal({ note, onSave, onDelete, onClose }: NoteModal
         <label>種類</label>
         <div style={{ display: 'flex', gap: 8 }}>
           {(['text', 'checklist'] as NoteType[]).map(t => (
-            <button key={t} onClick={() => t === 'checklist' ? switchToChecklist() : setType('text')}
+            <button key={t} onClick={() => t === 'checklist' ? switchToChecklist() : switchToText()}
               style={{
                 flex: 1, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer',
                 fontWeight: 700, fontSize: 14,
@@ -129,6 +142,14 @@ export default function NoteModal({ note, onSave, onDelete, onClose }: NoteModal
             ))}
           </div>
           <button className="note-add-item-btn" onClick={() => addItem(true)}>＋ 項目を追加</button>
+        </div>
+      )}
+
+      {/* Memo for checklist */}
+      {type === 'checklist' && (
+        <div className="fg">
+          <label>メモ（任意）</label>
+          <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="追記メモ…" rows={2} onFocus={scrollToInput} />
         </div>
       )}
 

@@ -23,10 +23,41 @@ export function getHabitStatus(habit: Habit): HabitStatusInfo {
   const last = new Date(habit.last_done); last.setHours(0, 0, 0, 0)
   const since = Math.round((today.getTime() - last.getTime()) / 86400000)
   if (since === 0) return { type: 'done' }
-  const left = habit.interval_days - since
+
+  const nextDue = new Date(last)
+  nextDue.setDate(nextDue.getDate() + habit.interval_days)
+  if (habit.weekday != null) {
+    const diff = (habit.weekday - nextDue.getDay() + 7) % 7
+    nextDue.setDate(nextDue.getDate() + diff)
+  }
+
+  const left = Math.round((nextDue.getTime() - today.getTime()) / 86400000)
   if (left > 0) return { type: 'upcoming', daysLeft: left }
   if (left === 0) return { type: 'due' }
   return { type: 'overdue', daysOver: Math.abs(left) }
+}
+
+/** 次の due 日を返す（weekday スナップ込み）*/
+export function getNextDueDate(habit: Habit): Date | null {
+  if (habit.interval_days === 0 || !habit.last_done) return null
+  const last = new Date(habit.last_done); last.setHours(0, 0, 0, 0)
+  const next = new Date(last)
+  next.setDate(next.getDate() + habit.interval_days)
+  if (habit.weekday != null) {
+    const diff = (habit.weekday - next.getDay() + 7) % 7
+    next.setDate(next.getDate() + diff)
+  }
+  return next
+}
+
+/** 「完了」押下時に記録する日付。曜日固定のルーティンは直前の目標曜日に戻す */
+export function completionDate(habit: Habit): string {
+  const d = new Date()
+  if (habit.weekday != null) {
+    const back = (d.getDay() - habit.weekday + 7) % 7
+    if (back > 0) d.setDate(d.getDate() - back)
+  }
+  return d.toISOString()
 }
 
 export function sortHabits(habits: Habit[]): Habit[] {

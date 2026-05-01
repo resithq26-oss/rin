@@ -11,24 +11,28 @@ interface ModalProps {
 
 export default function Modal({ title, onClose, footer, children }: ModalProps) {
   useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-    const update = () => {
-      const keyboardH = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
-      document.documentElement.style.setProperty('--keyboard-h', `${keyboardH}px`)
+    const setVvh = () => {
+      const h = window.visualViewport ? window.visualViewport.height : window.innerHeight
+      document.documentElement.style.setProperty('--vvh', `${h}px`)
     }
-    update()
-    vv.addEventListener('resize', update)
-    vv.addEventListener('scroll', update)
+    setVvh()
+    window.visualViewport?.addEventListener('resize', setVvh)
+    window.visualViewport?.addEventListener('scroll', setVvh)
+    window.addEventListener('resize', setVvh)
     return () => {
-      vv.removeEventListener('resize', update)
-      vv.removeEventListener('scroll', update)
-      document.documentElement.style.setProperty('--keyboard-h', '0px')
+      window.visualViewport?.removeEventListener('resize', setVvh)
+      window.visualViewport?.removeEventListener('scroll', setVvh)
+      window.removeEventListener('resize', setVvh)
+      document.documentElement.style.removeProperty('--vvh')
     }
   }, [])
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="modal-overlay" onClick={e => {
+      if (e.target !== e.currentTarget) return
+      if (window.innerWidth >= 768) return
+      onClose()
+    }}>
       <div className="modal">
         <div className="modal-body">
           <div className="modal-hdr">
